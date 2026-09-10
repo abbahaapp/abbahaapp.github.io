@@ -319,6 +319,11 @@ label {
     transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
+.field-info.tooltip-force-hidden .tooltip {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
 .field-info:hover .tooltip,
 .field-info:focus .tooltip,
 .field-info:focus-within .tooltip {
