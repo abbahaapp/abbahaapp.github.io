@@ -3307,6 +3307,8 @@ document.querySelectorAll('.field-info').forEach(info => {
     if (!tooltip) return;
 
     const updateTooltipPosition = () => {
+        info.classList.remove('tooltip-force-hidden');
+
         const rect = info.getBoundingClientRect();
         tooltip.style.top = `${rect.bottom + 9}px`;
         tooltip.style.left = '50%';
@@ -3338,6 +3340,7 @@ window.addEventListener('resize', () => {
 window.addEventListener('scroll', () => {
     document.querySelectorAll('.field-info').forEach(info => {
         info.blur();
+        info.classList.add('tooltip-force-hidden');
     });
 });
 
