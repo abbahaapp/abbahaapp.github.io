@@ -61,7 +61,20 @@
             <label for="periodEnd">تاریخ قرائت فعلی</label>
             <div class="jalali-date" id="periodEnd"></div>
 
-            <label for="billAmount">مجموع مبلغ قبوض <span class="unit-label">(تومان)</span></label>
+            <label for="billAmount">
+                مجموع مبلغ قبوض <span class="unit-label">(تومان)</span>
+                <span class="field-info" tabindex="0" aria-label="راهنمای مجموع مبلغ قبوض">
+                    <span class="info-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <circle cx="12" cy="12" r="9.25"></circle>
+                            <path d="M12 10.5v6"></path>
+                            <circle cx="12" cy="7.25" r="0.75"></circle>
+                        </svg>
+                    </span>
+                    <span class="tooltip">در صورت داشتن چند قبض، مبلغ آن‌ها را با هم جمع کرده و مجموع را وارد
+                        کنید.</span>
+                </span>
+            </label>
             <input type="text" id="billAmount" inputmode="numeric">
 
             <label for="unitCount">تعداد واحدها</label>
@@ -69,7 +82,20 @@
 
             <div id="meterOptions">
                 <div id="mainMeterGroup" hidden>
-                    <label for="mainMeter">مجموع مصرف کنتورهای اصلی</label>
+                    <label for="mainMeter">
+                        مجموع مصرف کنتورهای اصلی
+                        <span class="field-info" tabindex="0" aria-label="راهنمای مجموع مصرف کنتورهای اصلی">
+                            <span class="info-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <circle cx="12" cy="12" r="9.25"></circle>
+                                    <path d="M12 10.5v6"></path>
+                                    <circle cx="12" cy="7.25" r="0.75"></circle>
+                                </svg>
+                            </span>
+                            <span class="tooltip">در صورت داشتن چند کنتور اصلی، میزان مصرف آن‌ها را با هم جمع کرده و
+                                مجموع را وارد کنید.</span>
+                        </span>
+                    </label>
                     <input type="number" id="mainMeter" min="0" inputmode="numeric" pattern="[0-9]*">
                 </div>
             </div>
@@ -119,7 +145,7 @@
             <label class="round-toggle">
                 <input type="checkbox" id="roundUpAmounts" checked>
                 <span class="toggle-slider"></span>
-                <span class="toggle-label">گرد کردن مبالغ به بالا (۱۰۰ تومان)</span>
+                <span class="toggle-label">رند کردن سهم هر واحد به بالا (۱۰۰ تومان)</span>
             </label>
             <button id="calculateBtn">محاسبه</button>
         </section>
