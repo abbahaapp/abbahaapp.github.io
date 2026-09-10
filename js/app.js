@@ -342,7 +342,7 @@ function createUnitsTable() {
     totalUsage.textContent = '۰';
     if (!Number.isInteger(unitCount) || unitCount <= 0) return;
 
-    const unitCell = index => `<td><input type="number" class="unit-number" value="${index + 1}" min="1" readonly aria-label="شماره واحد ${index + 1}"></td>`;
+    const unitCell = index => `<td><input type="number" class="unit-number" value="${index + 1}" min="1" readonly tabindex="-1" aria-label="شماره واحد ${index + 1}"></td>`;
     const editButton = '<button type="button" class="unit-edit-btn" title="ویرایش شماره واحدها" aria-label="ویرایش شماره واحدها">✎</button>';
     if (currentMode() === 'people') {
         const rows = Array.from({ length: unitCount }, (_, index) => `<tr>${unitCell(index)}<td><input type="number" class="people-value" min="1" inputmode="numeric" pattern="[0-9]*" aria-label="تعداد نفرات واحد ${index + 1}"></td></tr>`).join('');
@@ -398,6 +398,7 @@ function toggleUnitEditing(event) {
     if (isCurrentlyReadOnly) {
         inputs.forEach(input => {
             input.readOnly = false;
+            input.tabIndex = 0;
         });
 
         event.currentTarget.textContent = '✓';
@@ -420,6 +421,7 @@ function toggleUnitEditing(event) {
     // ثبت تغییرات
     inputs.forEach(input => {
         input.readOnly = true;
+        input.tabIndex = -1;
     });
 
     event.currentTarget.textContent = '✎';
@@ -1362,6 +1364,10 @@ function renderResult(calculation, bills, period) {
         🖨️ چاپ
     </button>
 
+    <button id="imageBtnInside" class="secondary-button" style="display: inline-block; padding: 10px 20px; margin-right: 8px;">
+        🖼️ دریافت تصویر
+    </button>
+
     <button id="pdfBtnInside" class="secondary-button" style="display: inline-block; padding: 10px 20px; margin-right: 8px;">
         📄 دریافت PDF
     </button>
@@ -1394,6 +1400,14 @@ function renderResult(calculation, bills, period) {
     if (excelBtnInside) {
         excelBtnInside.addEventListener('click', function () {
             generateExcel(calculation, bills, period);
+        });
+    }
+
+    const imageBtnInside = document.getElementById('imageBtnInside');
+
+    if (imageBtnInside) {
+        imageBtnInside.addEventListener('click', function () {
+            generateImage();
         });
     }
 }
@@ -2927,6 +2941,337 @@ async function generatePDF() {
     }
 }
 
+async function generateImage() {
+    if (typeof html2canvas === 'undefined') {
+        alert('کتابخانه ساخت تصویر بارگذاری نشده است.');
+        return;
+    }
+
+    const report = document.getElementById('result');
+
+    if (!report || !report.innerHTML.trim()) {
+        alert('ابتدا قبض را محاسبه کنید.');
+        return;
+    }
+
+    const imageButton =
+        document.getElementById('imageBtnInside');
+
+    let imageClones = [];
+
+    try {
+        if (imageButton) {
+            imageButton.disabled = true;
+            imageButton.textContent =
+                '⏳ در حال ساخت تصویر...';
+        }
+
+        if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+
+        const sourceTable =
+            report.querySelector('table');
+
+        if (!sourceTable) {
+            throw new Error('جدول قبض پیدا نشد.');
+        }
+
+        const sourceTbody =
+            sourceTable.querySelector('tbody');
+
+        const sourceRows =
+            sourceTbody
+                ? Array.from(sourceTbody.children)
+                : [];
+
+        const sourceSummary =
+            report.querySelector('.result-summary');
+
+        const reportHeader =
+            sourceTable.querySelector('thead');
+
+        const headerHeight =
+            reportHeader
+                ? reportHeader.getBoundingClientRect().height
+                : 45;
+
+        const renderedWidth = 794;
+        const pageWidthMm = 210;
+        const pageHeightMm = 297;
+        const marginMm = 10;
+
+        const contentWidthMm =
+            pageWidthMm - (marginMm * 2);
+
+        const contentHeightMm =
+            pageHeightMm - (marginMm * 2);
+
+        const printableHeightPx =
+            renderedWidth *
+            (contentHeightMm / contentWidthMm);
+
+        const safePageHeightPx =
+            printableHeightPx - 70;
+
+        const rowHeights =
+            sourceRows.map(row =>
+                row.getBoundingClientRect().height
+            );
+
+        const summaryHeight =
+            sourceSummary
+                ? sourceSummary.getBoundingClientRect().height
+                : 0;
+
+        const chunks = [];
+        let currentChunk = [];
+        let currentHeight = headerHeight;
+
+        sourceRows.forEach((row, index) => {
+            const rowHeight =
+                rowHeights[index] || 40;
+
+            if (
+                currentChunk.length > 0 &&
+                currentHeight + rowHeight >
+                safePageHeightPx
+            ) {
+                chunks.push(currentChunk);
+                currentChunk = [];
+                currentHeight = headerHeight;
+            }
+
+            currentChunk.push(index);
+            currentHeight += rowHeight;
+        });
+
+        if (currentChunk.length > 0) {
+            chunks.push(currentChunk);
+        }
+
+        if (chunks.length === 0) {
+            chunks.push([]);
+        }
+
+        if (sourceSummary) {
+            let lastChunkHeight =
+                headerHeight +
+                chunks[chunks.length - 1].reduce(
+                    (total, index) =>
+                        total + (rowHeights[index] || 40),
+                    0
+                );
+
+            if (
+                lastChunkHeight +
+                summaryHeight >
+                safePageHeightPx &&
+                chunks[chunks.length - 1].length > 0
+            ) {
+                chunks.push([]);
+            }
+        }
+
+        const today =
+            new Date();
+
+        const datePart =
+            `${today.getFullYear()}-${String(
+                today.getMonth() + 1
+            ).padStart(2, '0')}-${String(
+                today.getDate()
+            ).padStart(2, '0')}`;
+
+        for (let pageIndex = 0; pageIndex < chunks.length; pageIndex++) {
+            const pageRows =
+                chunks[pageIndex];
+
+            const isLastPage =
+                pageIndex === chunks.length - 1;
+
+            const imageClone =
+                report.cloneNode(true);
+
+            imageClone.querySelectorAll(
+                '.no-print'
+            ).forEach(element => {
+                element.remove();
+            });
+
+            imageClone.style.position = 'absolute';
+            imageClone.style.left = '-100000px';
+            imageClone.style.top = '0';
+            imageClone.style.width = `${renderedWidth}px`;
+            imageClone.style.minHeight = 'auto';
+            imageClone.style.height = 'auto';
+            imageClone.style.background = '#ffffff';
+            imageClone.style.padding = '30px';
+            imageClone.style.boxSizing = 'border-box';
+            imageClone.style.border = 'none';
+            imageClone.style.boxShadow = 'none';
+            imageClone.style.borderRadius = '0';
+            imageClone.style.direction = 'rtl';
+            imageClone.style.overflow = 'visible';
+
+            const cloneTable =
+                imageClone.querySelector('table');
+
+            if (!cloneTable) {
+                throw new Error('جدول قبض در صفحه تصویر پیدا نشد.');
+            }
+
+            const cloneTbody =
+                cloneTable.querySelector('tbody');
+
+            if (cloneTbody) {
+                if (pageRows.length === 0) {
+                    cloneTable.remove();
+                } else {
+                    const cloneRows =
+                        Array.from(cloneTbody.children);
+
+                    cloneRows.forEach((row, index) => {
+                        if (!pageRows.includes(index)) {
+                            row.remove();
+                        }
+                    });
+                }
+            }
+
+            if (!isLastPage) {
+                const cloneSummary =
+                    imageClone.querySelector('.result-summary');
+
+                if (cloneSummary) {
+                    cloneSummary.remove();
+                }
+            }
+
+            document.body.appendChild(imageClone);
+            imageClones.push(imageClone);
+
+            await new Promise(resolve =>
+                setTimeout(resolve, 30)
+            );
+
+            const canvas =
+                await html2canvas(
+                    imageClone,
+                    {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width:
+                            imageClone.scrollWidth,
+                        height:
+                            imageClone.scrollHeight
+                    }
+                );
+
+            const fixedCanvas =
+                document.createElement('canvas');
+
+            fixedCanvas.width =
+                1588;
+
+            fixedCanvas.height =
+                2246;
+
+            const fixedContext =
+                fixedCanvas.getContext('2d');
+
+            fixedContext.fillStyle =
+                '#ffffff';
+
+            fixedContext.fillRect(
+                0,
+                0,
+                fixedCanvas.width,
+                fixedCanvas.height
+            );
+
+            const scale =
+                Math.min(
+                    fixedCanvas.width / canvas.width,
+                    fixedCanvas.height / canvas.height
+                );
+
+            const drawWidth =
+                canvas.width * scale;
+
+            const drawHeight =
+                canvas.height * scale;
+
+            const offsetX =
+                (fixedCanvas.width - drawWidth) / 2;
+
+            const offsetY =
+                0;
+
+            fixedContext.drawImage(
+                canvas,
+                offsetX,
+                offsetY,
+                drawWidth,
+                drawHeight
+            );
+
+            const imageData =
+                fixedCanvas.toDataURL('image/png');
+
+            const link =
+                document.createElement('a');
+
+            const pageNumber =
+                pageIndex + 1;
+
+            const fileName =
+                `قبض-آب-${datePart}-صفحه-${pageNumber}.png`;
+
+            link.download = fileName;
+            link.href = imageData;
+            link.click();
+
+            imageClone.remove();
+            imageClones =
+                imageClones.filter(
+                    element => element !== imageClone
+                );
+
+            if (pageIndex < chunks.length - 1) {
+                await new Promise(resolve =>
+                    setTimeout(resolve, 150)
+                );
+            }
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Image generation error:',
+            error
+        );
+
+        alert(
+            'در ساخت تصویر مشکلی پیش آمد. دوباره تلاش کنید.'
+        );
+
+    } finally {
+
+        imageClones.forEach(clone => {
+            clone.remove();
+        });
+
+        if (imageButton) {
+            imageButton.disabled = false;
+            imageButton.textContent =
+                '🖼️ دریافت تصویر';
+        }
+    }
+}
+
 // ===== محدودیت ورود فقط عدد صحیح در فیلدهای عددی =====
 document.querySelectorAll('input[type="number"]').forEach(input => {
     input.addEventListener('input', () => {
@@ -2954,6 +3299,46 @@ unitsTable.addEventListener('input', event => {
             event.target.value = '';
         }
     }
+});
+
+document.querySelectorAll('.field-info').forEach(info => {
+    const tooltip = info.querySelector('.tooltip');
+
+    if (!tooltip) return;
+
+    const updateTooltipPosition = () => {
+        const rect = info.getBoundingClientRect();
+        tooltip.style.top = `${rect.bottom + 9}px`;
+        tooltip.style.left = '50%';
+    };
+
+    info.addEventListener('mouseenter', updateTooltipPosition);
+    info.addEventListener('focus', updateTooltipPosition);
+    info.addEventListener('focusin', updateTooltipPosition);
+
+    info.addEventListener('mouseleave', () => {
+        info.blur();
+    });
+});
+
+window.addEventListener('resize', () => {
+    document.querySelectorAll('.field-info').forEach(info => {
+        if (info.matches(':hover') || info.matches(':focus-within')) {
+            const tooltip = info.querySelector('.tooltip');
+
+            if (!tooltip) return;
+
+            const rect = info.getBoundingClientRect();
+            tooltip.style.top = `${rect.bottom + 9}px`;
+            tooltip.style.left = '50%';
+        }
+    });
+});
+
+window.addEventListener('scroll', () => {
+    document.querySelectorAll('.field-info').forEach(info => {
+        info.blur();
+    });
 });
 
 // ===================== Event Listeners =====================
