@@ -359,7 +359,7 @@ select {
 textarea {
     min-height: 100px;
     padding: 12px 13px;
-    resize: vertical;
+    resize: none;
     line-height: 1.8;
 }
 
