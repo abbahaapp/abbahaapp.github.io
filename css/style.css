@@ -1487,6 +1487,43 @@ input[type="number"] {
     line-height: 1.8;
 }
 
+.footer-contact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin: 0 auto 6px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.18s ease, transform 0.15s ease;
+}
+
+.footer-contact svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.footer-contact:hover {
+    color: var(--primary);
+}
+
+.footer-contact:active {
+    transform: translateY(1px);
+}
+
+.footer-contact:focus-visible {
+    outline: 2px solid rgba(23, 105, 170, 0.25);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
 .footer-copyright {
     font-size: 11px;
     color: var(--muted);
