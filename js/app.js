@@ -973,11 +973,11 @@ function validateForm() {
     if (
         !Number.isInteger(unitCount) ||
         unitCount < 1 ||
-        unitCount > 200
+        unitCount > 250
     ) {
         showFieldError(
             unitCountInput,
-            'تعداد واحدها باید بین ۱ تا ۲۰۰ باشد.'
+            'تعداد واحدها باید بین ۱ تا ۲۵۰ باشد.'
         );
         isValid = false;
     }
@@ -1349,7 +1349,7 @@ function renderResult(calculation, bills, period) {
         : `<p><b>تعداد کل نفرات:</b> ${formatPlainNumber(calculation.totalPeople)}</p>`;
     const remainder = calculation.remainder === undefined ? '' : `<p><b>باقی‌مانده تقسیم شده:</b> ${formatMoney(Math.round(calculation.remainder))}</p><p><b>سهم باقی‌مانده هر واحد:</b> ${formatMoney(Math.round(calculation.equalShare))}</p>`;
 
-    const totalAmount = `<p><b>مجموع مبلغ قبوض:</b> ${formatMoney(calculation.billAmount)}</p>`;
+    const totalAmount = `<p><b>مبلغ قبض آب:</b> ${formatMoney(calculation.billAmount)}</p>`;
 
     let perPersonShare = '';
     if (currentMode() === 'people' && calculation.totalPeople > 0) {
@@ -1358,6 +1358,10 @@ function renderResult(calculation, bills, period) {
     }
 
     const monthName = getMonthFromDate(period.end);
+    const buildingName = $('buildingName').value.trim();
+    const resultTitle = buildingName
+        ? `${escapeHtml(buildingName)} - صورتحساب ${monthName}`
+        : `صورتحساب ${monthName}`;
 
     const printButton = `<div style="text-align: center; margin-top: 20px;" class="no-print">
     <button id="printBtnInside" class="secondary-button" style="display: inline-block; padding: 10px 20px;">
@@ -1377,7 +1381,7 @@ function renderResult(calculation, bills, period) {
     </button>
 </div>`;
 
-    result.innerHTML = `<table><thead>${header}</thead><tbody>${rows}</tbody></table><div class="result-summary"><p><b>صورت حساب ${monthName}</b></p><p><b>دوره قبض:</b> ${period.start} تا ${period.end} (${formatNumber(period.days)} روز)</p>${summary}${totalAmount}${perPersonShare}${remainder}<p><b>مهلت پرداخت:</b> ${deadline}</p><p><b>شماره کارت ساختمان:</b> ${card}</p>${notes}</div>${printButton}`;
+    result.innerHTML = `<table><thead>${header}</thead><tbody>${rows}</tbody></table><div class="result-summary"><p><b>${resultTitle}</b></p><p><b>دوره قبض:</b> ${period.start} تا ${period.end} (${formatNumber(period.days)} روز)</p>${summary}${totalAmount}${perPersonShare}${remainder}<p><b>مهلت پرداخت:</b> ${deadline}</p><p><b>شماره کارت ساختمان:</b> ${card}</p>${notes}</div>${printButton}`;
 
     const printBtnInside = document.getElementById('printBtnInside');
 
@@ -1484,8 +1488,14 @@ function generateExcel(calculation, bills, period) {
         // داده‌های Excel
         // =====================================================
 
+        const buildingName = $('buildingName').value.trim();
+
+        const excelTitle = buildingName
+            ? `گزارش قبض آب ${buildingName}`
+            : 'گزارش قبض آب';
+
         const data = [
-            ['گزارش قبض آب ساختمان'],
+            [excelTitle],
             []
         ];
 
@@ -1547,7 +1557,7 @@ function generateExcel(calculation, bills, period) {
             data.push([
                 'دوره قبض',
                 `${period.start} - ${period.end} ${formatDaysWithParentheses(period.days)}`,
-                'مجموع مبلغ قبوض (تومان)',
+                'مبلغ قبض آب (تومان)',
                 cleanNumber(bills.total)
             ]);
 
@@ -1580,7 +1590,7 @@ function generateExcel(calculation, bills, period) {
             ]);
 
             data.push([
-                'مجموع مبلغ قبوض (تومان)',
+                'مبلغ قبض آب (تومان)',
                 cleanNumber(bills.total),
                 'روش محاسبه',
                 methodName
@@ -1622,7 +1632,7 @@ function generateExcel(calculation, bills, period) {
             ]);
 
             data.push([
-                'مجموع مبلغ قبوض (تومان)',
+                'مبلغ قبض آب (تومان)',
                 cleanNumber(bills.total),
                 'روش محاسبه',
                 methodName
@@ -2097,12 +2107,12 @@ function generateExcel(calculation, bills, period) {
         const moneyCells = [];
 
         if (isSubMeterMode) {
-            // مجموع مبلغ قبوض
+            // مبلغ قبض آب
             moneyCells.push(`D${summaryStartRow}`);
         }
 
         if (isMainMeterMode) {
-            // مجموع مبلغ قبوض
+            // مبلغ قبض آب
             moneyCells.push(`B${summaryStartRow + 1}`);
 
             // باقی‌مانده تقسیم شده
@@ -2113,7 +2123,7 @@ function generateExcel(calculation, bills, period) {
         }
 
         if (isPeopleMode) {
-            // مجموع مبلغ قبوض
+            // مبلغ قبض آب
             moneyCells.push(`B${summaryStartRow + 1}`);
 
             // سهم هر نفر
@@ -3352,13 +3362,13 @@ unitCountInput.addEventListener('change', () => {
     if (
         !Number.isInteger(unitCount) ||
         unitCount < 1 ||
-        unitCount > 200
+        unitCount > 250
     ) {
         clearValidationErrors();
 
         showFieldError(
             unitCountInput,
-            'تعداد واحدها باید بین ۱ تا ۲۰۰ باشد.'
+            'تعداد واحدها باید بین ۱ تا ۲۵۰ باشد.'
         );
 
         return;
