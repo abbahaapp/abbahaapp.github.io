@@ -2859,10 +2859,11 @@ async function generatePDF() {
                         useCORS: true,
                         backgroundColor: '#ffffff',
                         logging: false,
-                        width:
-                            pageClone.scrollWidth,
-                        height:
-                            pageClone.scrollHeight
+                        windowWidth: 794,
+                        windowHeight:
+                            Math.ceil(
+                                pageClone.getBoundingClientRect().height
+                            ) + 100
                     }
                 );
 
@@ -3044,14 +3045,9 @@ async function generateImage() {
             printableHeightPx - 66;
 
         const rowHeights =
-            sourceRows.map(row =>
-                row.getBoundingClientRect().height
-            );
+            sourceRows.map(() => 40);
 
-        const summaryHeight =
-            sourceSummary
-                ? sourceSummary.getBoundingClientRect().height
-                : 0;
+        const summaryHeight = 0;
 
         const chunks = [];
 
@@ -3240,10 +3236,11 @@ async function generateImage() {
                         useCORS: true,
                         backgroundColor: '#ffffff',
                         logging: false,
-                        width:
-                            imageClone.scrollWidth,
-                        height:
-                            imageClone.scrollHeight
+                        windowWidth: 794,
+                        windowHeight:
+                            Math.ceil(
+                                imageClone.getBoundingClientRect().height
+                            ) + 100
                     }
                 );
 
