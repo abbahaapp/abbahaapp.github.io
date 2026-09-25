@@ -328,11 +328,11 @@ function createUnitsTable() {
 
     if (currentMode() === 'people') {
         $('unitsTitle').textContent = 'تعداد نفرات واحدها';
-        $('unitsHelp').textContent = 'تعداد افراد ساکن در هر واحد را وارد کنید.';
+        $('unitsHelp').textContent = 'تعداد ساکنان هر واحد را وارد کنید.';
         $('totalLabel').textContent = 'تعداد کل نفرات';
     } else if (currentMode()) {
         $('unitsTitle').textContent = 'اطلاعات کنتور واحدها';
-        $('unitsHelp').textContent = 'رقم قبلی و رقم فعلی کنتور هر واحد را وارد کنید؛ مقدار مصرف خودکار محاسبه می‌شود.';
+        $('unitsHelp').textContent = 'رقم قبلی و فعلی کنتور هر واحد را وارد کنید؛ میزان مصرف به ‌صورت خودکار محاسبه می‌شود.';
         $('totalLabel').textContent = 'مجموع مصرف کنتورهای فرعی';
     }
 
@@ -351,7 +351,10 @@ function createUnitsTable() {
     } else if (currentMode()) {
         const rows = Array.from({ length: unitCount }, (_, index) => `<tr>${unitCell(index)}<td><input type="number" class="previous-reading" min="0" inputmode="numeric" pattern="[0-9]*" aria-label="رقم قبلی واحد ${index + 1}"></td><td><input type="number" class="current-reading" min="0" inputmode="numeric" pattern="[0-9]*" aria-label="رقم فعلی واحد ${index + 1}"></td><td class="calculated-consumption">۰</td></tr>`).join('');
         unitsTable.innerHTML = `<table><thead><tr><th>واحد${editButton}</th><th>رقم قبلی</th><th>رقم فعلی</th><th>مقدار مصرف</th></tr></thead><tbody>${rows}</tbody></table>`;
-        unitsTable.querySelectorAll('.previous-reading, .current-reading').forEach(input => input.addEventListener('input', updateTotal));
+        unitsTable.querySelectorAll('.previous-reading, .current-reading').forEach(input => {
+            input.addEventListener('input', () => updateTotal());
+            input.addEventListener('blur', () => updateTotal(true));
+        });
     }
 
     const editBtn = unitsTable.querySelector('.unit-edit-btn');
@@ -495,7 +498,7 @@ function handleFirstUnitNumberChange(event) {
     handleUnitNumberInput();
 }
 
-function updateTotal() {
+function updateTotal(forceValidation = false) {
     if (currentMode() === 'people') {
         totalUsage.textContent =
             formatPlainNumber(
@@ -557,13 +560,44 @@ function updateTotal() {
             const current =
                 parseNumber(currentValue);
 
-            // -------------------------------------------------
-            // وقتی هر دو مقدار وارد شدند،
-            // مصرف را محاسبه و اعتبارسنجی می‌کنیم.
-            // -------------------------------------------------
-
             const consumption =
                 current - previous;
+
+            // -------------------------------------------------
+            // تا وقتی کاربر داخل فیلد رقم قبلی یا فعلی است،
+            // اعتبارسنجی انجام نشود؛
+            // مگر اینکه اعتبارسنجی به‌صورت اجباری درخواست شده باشد.
+            // -------------------------------------------------
+
+            const activeInput =
+                document.activeElement?.closest('.previous-reading, .current-reading');
+
+            if (
+                !forceValidation &&
+                activeInput &&
+                row.contains(activeInput)
+            ) {
+                row.classList.remove('reading-error');
+
+                if (
+                    Number.isFinite(previous) &&
+                    Number.isFinite(current) &&
+                    consumption >= 0
+                ) {
+                    consumptionCell.textContent =
+                        formatPlainNumber(consumption);
+                } else {
+                    consumptionCell.textContent =
+                        '۰';
+                }
+
+                return;
+            }
+
+            // -------------------------------------------------
+            // بعد از خروج از فیلد یا هنگام خروج از صفحه،
+            // اعتبارسنجی انجام شود.
+            // -------------------------------------------------
 
             const hasError =
                 !Number.isFinite(previous) ||
@@ -578,10 +612,8 @@ function updateTotal() {
             );
 
             if (hasError) {
-
                 consumptionCell.textContent =
                     'خطا';
-
                 return;
             }
 
@@ -596,6 +628,12 @@ function updateTotal() {
 
     markDuplicateUnits();
 }
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        updateTotal(true);
+    }
+});
 
 function markDuplicateUnits() {
     const inputs = [...document.querySelectorAll('.unit-number')];
@@ -731,9 +769,9 @@ function clearUnitEditError() {
 function showMethodDescription() {
     const method = currentMode();
     const descriptions = {
-        'sub-meter': 'مبلغ قبوض بر اساس مجموع مصرف کنتورهای فرعی تقسیم می‌شود و اختلاف بین مصرف کنتورهای اصلی و فرعی به نسبت مصرف هر واحد، بین واحدها توزیع می‌گردد.',
-        'main-meter': 'مبلغ قبوض بر اساس مجموع مصرف کنتورهای اصلی تقسیم می‌شود و سهم هر واحد بر اساس مصرف کنتور فرعی آن واحد تعیین می‌گردد. سپس باقی‌مانده به طور مساوی بین همهٔ واحدها تقسیم می‌شود.',
-        'people': 'مبلغ قبوض بر اساس تعداد کل نفرات تقسیم می‌شود و سهم هر واحد بر اساس تعداد ساکنان آن تعیین می‌گردد.'
+        'sub-meter': 'مبلغ قبض بر اساس میزان مصرف کنتورهای فرعی، بین واحدها تقسیم می‌شود.',
+        'main-meter': 'سهم اولیه هر واحد بر اساس میزان مصرف کنتور فرعی آن نسبت به مصرف کنتور اصلی محاسبه می‌شود. سپس مبلغ باقی‌مانده قبض به‌طور مساوی بین واحدها تقسیم می‌شود.',
+        'people': 'مبلغ قبض بر اساس تعداد کل ساکنان ساختمان تقسیم می‌شود و سهم هر واحد متناسب با تعداد ساکنان آن تعیین می‌گردد.'
     };
 
     document.querySelectorAll('.method-description').forEach(el => el.hidden = true);
@@ -1339,6 +1377,7 @@ function renderResult(calculation, bills, period) {
     ).join('');
     const deadline = $('urgentPayment').checked ? 'فوری' : getSelectedDate('paymentDeadline', 'مهلت پرداخت').text;
     const cardValue = $('cardNumber').value.trim();
+    const RLM = '\u200F';
 
     const card = cardValue
         ? `<span class="card-number" dir="auto">${escapeHtml(cardValue)}</span>`
@@ -1381,7 +1420,7 @@ function renderResult(calculation, bills, period) {
     </button>
 </div>`;
 
-    result.innerHTML = `<table><thead>${header}</thead><tbody>${rows}</tbody></table><div class="result-summary"><p><b>${resultTitle}</b></p><p><b>دوره قبض:</b> ${period.start} تا ${period.end} (${formatNumber(period.days)} روز)</p>${summary}${totalAmount}${perPersonShare}${remainder}<p><b>مهلت پرداخت:</b> ${deadline}</p><p><b>شماره کارت ساختمان:</b> ${card}</p>${notes}</div>${printButton}`;
+    result.innerHTML = `<table><thead>${header}</thead><tbody>${rows}</tbody></table><div class="result-summary"><p><b>${resultTitle}</b></p><p><b>دوره قبض:</b> ${period.start} تا ${period.end} <span dir="ltr">(${RLM}${formatNumber(period.days)} روز${RLM})</span></p>${summary}${totalAmount}${perPersonShare}${remainder}<p><b>مهلت پرداخت:</b> ${deadline}</p><p><b>شماره کارت ساختمان:</b> ${card}</p>${notes}</div>${printButton}`;
 
     const printBtnInside = document.getElementById('printBtnInside');
 
@@ -1446,11 +1485,11 @@ function generateExcel(calculation, bills, period) {
         let methodName = '';
 
         if (isSubMeterMode) {
-            methodName = 'تقسیم قبض بر اساس مصرف کنتورهای فرعی';
+            methodName = 'بر اساس مصرف کنتورهای فرعی';
         } else if (isMainMeterMode) {
-            methodName = 'تقسیم با کنتور اصلی و تقسیم اختلاف';
+            methodName = 'بر اساس کنتور اصلی و کنتورهای فرعی';
         } else if (isPeopleMode) {
-            methodName = 'تقسیم قبض بر اساس تعداد نفرات';
+            methodName = 'بر اساس تعداد ساکنان';
         }
 
         // =====================================================
@@ -1562,7 +1601,7 @@ function generateExcel(calculation, bills, period) {
             ]);
 
             data.push([
-                'روش محاسبه',
+                'روش تقسیم هزینه',
                 methodName,
                 'مجموع مصرف',
                 cleanNumber(calculation.totalConsumption)
@@ -1592,7 +1631,7 @@ function generateExcel(calculation, bills, period) {
             data.push([
                 'مبلغ قبض آب (تومان)',
                 cleanNumber(bills.total),
-                'روش محاسبه',
+                'روش تقسیم هزینه',
                 methodName
             ]);
 
@@ -1634,7 +1673,7 @@ function generateExcel(calculation, bills, period) {
             data.push([
                 'مبلغ قبض آب (تومان)',
                 cleanNumber(bills.total),
-                'روش محاسبه',
+                'روش تقسیم هزینه',
                 methodName
             ]);
 
@@ -2323,6 +2362,93 @@ function generateExcel(calculation, bills, period) {
         ];
 
         // =====================================================
+        // انتقال کل Worksheet به راست
+        // =====================================================
+
+        // یک ستون باریک در سمت راست جدول ایجاد می‌کنیم
+        // تا جدول مستقیماً به لبه شیت نچسبد.
+        const shiftedWorksheet = {};
+
+        Object.keys(worksheet).forEach(key => {
+
+            if (key[0] === '!') {
+                shiftedWorksheet[key] = worksheet[key];
+                return;
+            }
+
+            const cellAddress =
+                XLSX.utils.decode_cell(key);
+
+            cellAddress.c += 1;
+
+            const newAddress =
+                XLSX.utils.encode_cell(cellAddress);
+
+            shiftedWorksheet[newAddress] =
+                worksheet[key];
+        });
+
+        // انتقال Mergeها یک ستون به راست
+        if (worksheet['!merges']) {
+
+            shiftedWorksheet['!merges'] =
+                worksheet['!merges'].map(range => ({
+                    s: {
+                        r: range.s.r,
+                        c: range.s.c + 1
+                    },
+                    e: {
+                        r: range.e.r,
+                        c: range.e.c + 1
+                    }
+                }));
+        }
+
+        // انتقال محدوده Worksheet یک ستون به راست
+        if (worksheet['!ref']) {
+
+            const range =
+                XLSX.utils.decode_range(
+                    worksheet['!ref']
+                );
+
+            range.s.c += 1;
+            range.e.c += 1;
+
+            shiftedWorksheet['!ref'] =
+                XLSX.utils.encode_range(range);
+        }
+
+        // انتقال عرض ستون‌ها و ایجاد ستون فاصله
+        if (worksheet['!cols']) {
+
+            shiftedWorksheet['!cols'] = [
+                { wch: 2 },
+                ...worksheet['!cols']
+            ];
+        }
+
+        // انتقال سایر تنظیمات Worksheet
+        Object.keys(worksheet).forEach(key => {
+
+            if (
+                key === '!merges' ||
+                key === '!ref' ||
+                key === '!cols'
+            ) {
+                return;
+            }
+
+            if (key[0] === '!') {
+                shiftedWorksheet[key] =
+                    worksheet[key];
+            }
+        });
+
+        const finalWorksheet =
+            shiftedWorksheet;
+
+        // =====================================================
         // Workbook
         // =====================================================
 
@@ -2339,7 +2465,7 @@ function generateExcel(calculation, bills, period) {
 
         XLSX.utils.book_append_sheet(
             workbook,
-            worksheet,
+            finalWorksheet,
             'گزارش قبض'
         );
 
@@ -2466,27 +2592,15 @@ async function generatePDF() {
         document.getElementById('printBtnInside');
 
     try {
-        // =====================================================
-        // جلوگیری از چند بار کلیک
-        // =====================================================
-
         if (pdfButton) {
             pdfButton.disabled = true;
             pdfButton.textContent =
                 '⏳ در حال ساخت PDF...';
         }
 
-        // =====================================================
-        // صبر برای آماده شدن فونت‌ها
-        // =====================================================
-
         if (document.fonts && document.fonts.ready) {
             await document.fonts.ready;
         }
-
-        // =====================================================
-        // تنظیمات PDF
-        // =====================================================
 
         const { jsPDF } = window.jspdf;
 
@@ -2501,10 +2615,6 @@ async function generatePDF() {
         const contentHeight =
             pageHeight - (margin * 2);
 
-        // =====================================================
-        // ساخت نسخه پایه برای اندازه‌گیری
-        // =====================================================
-
         const baseClone =
             report.cloneNode(true);
 
@@ -2518,7 +2628,6 @@ async function generatePDF() {
         baseClone.style.left = '-100000px';
         baseClone.style.top = '0';
 
-        // همان ابعاد نسخه قبلی
         baseClone.style.width = '794px';
         baseClone.style.minHeight = 'auto';
         baseClone.style.height = 'auto';
@@ -2535,10 +2644,6 @@ async function generatePDF() {
         baseClone.style.overflow = 'visible';
 
         document.body.appendChild(baseClone);
-
-        // =====================================================
-        // پیدا کردن جدول
-        // =====================================================
 
         const baseTable =
             baseClone.querySelector('table');
@@ -2561,11 +2666,6 @@ async function generatePDF() {
         const rowCount =
             sourceRows.length;
 
-        // =====================================================
-        // ارتفاع قابل استفاده هر صفحه
-        // بر اساس عرض واقعی PDF
-        // =====================================================
-
         const renderedWidth =
             baseClone.scrollWidth;
 
@@ -2573,14 +2673,8 @@ async function generatePDF() {
             renderedWidth *
             (contentHeight / contentWidth);
 
-        // کمی فضای امن برای جلوگیری از برخورد
-        // آخرین ردیف با پایین صفحه
         const safePageHeightPx =
-            printableHeightPx - 25;
-
-        // =====================================================
-        // اندازه هدر جدول
-        // =====================================================
+            printableHeightPx - 66;
 
         const thead =
             baseTable.querySelector('thead');
@@ -2590,18 +2684,10 @@ async function generatePDF() {
                 ? thead.getBoundingClientRect().height
                 : 0;
 
-        // =====================================================
-        // اندازه ردیف‌ها
-        // =====================================================
-
         const rowHeights =
             sourceRows.map(row =>
                 row.getBoundingClientRect().height
             );
-
-        // =====================================================
-        // خلاصه اطلاعات پایین جدول
-        // =====================================================
 
         const summary =
             baseClone.querySelector(
@@ -2613,15 +2699,7 @@ async function generatePDF() {
                 ? summary.getBoundingClientRect().height
                 : 0;
 
-        // فاصله بین جدول و خلاصه
         const summaryGap = 20;
-
-        // =====================================================
-        // تعیین صفحات به صورت ترتیبی
-        //
-        // ردیف‌ها از ابتدای جدول به ترتیب وارد صفحات می‌شوند.
-        // صفحه اول و صفحات میانی تا حد ظرفیت پر می‌شوند.
-        // =====================================================
 
         const pageChunks = [];
 
@@ -2633,7 +2711,6 @@ async function generatePDF() {
             i < rowCount;
             i++
         ) {
-
             const rowHeight =
                 rowHeights[i];
 
@@ -2642,7 +2719,6 @@ async function generatePDF() {
                 currentHeight + rowHeight >
                 safePageHeightPx
             ) {
-
                 pageChunks.push({
                     rows: currentChunk,
                     isLast: false
@@ -2656,32 +2732,21 @@ async function generatePDF() {
             currentHeight += rowHeight;
         }
 
-        // آخرین بخش جدول
         if (currentChunk.length > 0) {
-
             const lastChunkHeight =
                 currentHeight +
                 summaryGap +
                 summaryHeight;
 
-            // اگر جدول + خلاصه در همین صفحه جا می‌شوند،
-            // همین صفحه آخر واقعی است.
             if (
                 lastChunkHeight <=
                 safePageHeightPx
             ) {
-
                 pageChunks.push({
                     rows: currentChunk,
                     isLast: true
                 });
-
             } else {
-
-                // اگر خلاصه در این صفحه جا نشود،
-                // ردیف‌های جدول در یک صفحه مستقل می‌مانند
-                // و صفحه بعد فقط برای خلاصه ساخته می‌شود.
-
                 pageChunks.push({
                     rows: currentChunk,
                     isLast: false
@@ -2692,25 +2757,14 @@ async function generatePDF() {
                     isLast: true
                 });
             }
-
         } else {
-
-            // حالت بدون ردیف
             pageChunks.push({
                 rows: [],
                 isLast: true
             });
         }
 
-        // =====================================================
-        // حذف نسخه اندازه‌گیری
-        // =====================================================
-
         baseClone.remove();
-
-        // =====================================================
-        // ساخت PDF
-        // =====================================================
 
         const pdf = new jsPDF({
             orientation: 'portrait',
@@ -2719,22 +2773,13 @@ async function generatePDF() {
             compress: true
         });
 
-        // =====================================================
-        // ساخت هر صفحه به صورت جداگانه
-        // =====================================================
-
         for (
             let pageIndex = 0;
             pageIndex < pageChunks.length;
             pageIndex++
         ) {
-
             const chunk =
                 pageChunks[pageIndex];
-
-            // =================================================
-            // ساخت Clone مخصوص این صفحه
-            // =================================================
 
             const pageClone =
                 report.cloneNode(true);
@@ -2766,10 +2811,6 @@ async function generatePDF() {
 
             document.body.appendChild(pageClone);
 
-            // =================================================
-            // جدول صفحه
-            // =================================================
-
             const pageTable =
                 pageClone.querySelector('table');
 
@@ -2779,13 +2820,11 @@ async function generatePDF() {
                     : null;
 
             if (pageBody) {
-
                 const pageRows =
                     [...pageBody.querySelectorAll('tr')];
 
                 pageRows.forEach(
                     (row, index) => {
-
                         if (
                             !chunk.rows.includes(index)
                         ) {
@@ -2794,10 +2833,6 @@ async function generatePDF() {
                     }
                 );
             }
-
-            // =================================================
-            // خلاصه فقط روی آخرین صفحه
-            // =================================================
 
             const pageSummary =
                 pageClone.querySelector(
@@ -2811,11 +2846,6 @@ async function generatePDF() {
                 pageSummary.remove();
             }
 
-            // =================================================
-            // اگر صفحه آخر جدول ندارد،
-            // جدول خالی حذف شود.
-            // =================================================
-
             if (
                 chunk.isLast &&
                 chunk.rows.length === 0 &&
@@ -2824,17 +2854,9 @@ async function generatePDF() {
                 pageTable.remove();
             }
 
-            // =================================================
-            // زمان کوتاه برای Render
-            // =================================================
-
             await new Promise(resolve =>
                 setTimeout(resolve, 30)
             );
-
-            // =================================================
-            // تبدیل صفحه به Canvas
-            // =================================================
 
             const canvas =
                 await html2canvas(
@@ -2850,10 +2872,6 @@ async function generatePDF() {
                             pageClone.scrollHeight
                     }
                 );
-
-            // =================================================
-            // اضافه کردن صفحه به PDF
-            // =================================================
 
             if (pageIndex > 0) {
                 pdf.addPage();
@@ -2872,39 +2890,48 @@ async function generatePDF() {
                 ) /
                 imageWidth;
 
+            const scale =
+                Math.min(
+                    1,
+                    contentWidth / (
+                        imageWidth *
+                        contentWidth /
+                        imageWidth
+                    ),
+                    contentHeight /
+                    imageHeightInMM
+                );
+
+            const finalWidth =
+                contentWidth * scale;
+
+            const finalHeight =
+                imageHeightInMM * scale;
+
+            const finalX =
+                margin +
+                (contentWidth - finalWidth) / 2;
+
+            const finalY =
+                margin;
+
             const imageData =
                 canvas.toDataURL(
                     'image/jpeg',
                     0.95
                 );
 
-            // ارتفاع صفحه را از محدوده A4
-            // بیشتر نکنیم
-            const finalHeight =
-                Math.min(
-                    imageHeightInMM,
-                    contentHeight
-                );
-
             pdf.addImage(
                 imageData,
                 'JPEG',
-                margin,
-                margin,
-                contentWidth,
+                finalX,
+                finalY,
+                finalWidth,
                 finalHeight
             );
 
-            // =================================================
-            // حذف Clone
-            // =================================================
-
             pageClone.remove();
         }
-
-        // =====================================================
-        // نام فایل
-        // =====================================================
 
         const today =
             new Date();
@@ -2916,14 +2943,9 @@ async function generatePDF() {
                 today.getDate()
             ).padStart(2, '0')}.pdf`;
 
-        // =====================================================
-        // ذخیره
-        // =====================================================
-
         pdf.save(fileName);
 
     } catch (error) {
-
         console.error(
             'PDF generation error:',
             error
@@ -2934,11 +2956,6 @@ async function generatePDF() {
         );
 
     } finally {
-
-        // =====================================================
-        // فعال کردن دوباره دکمه‌ها
-        // =====================================================
-
         if (pdfButton) {
             pdfButton.disabled = false;
             pdfButton.textContent =
@@ -2957,7 +2974,8 @@ async function generateImage() {
         return;
     }
 
-    const report = document.getElementById('result');
+    const report =
+        document.getElementById('result');
 
     if (!report || !report.innerHTML.trim()) {
         alert('ابتدا قبض را محاسبه کنید.');
@@ -2984,7 +3002,9 @@ async function generateImage() {
             report.querySelector('table');
 
         if (!sourceTable) {
-            throw new Error('جدول قبض پیدا نشد.');
+            throw new Error(
+                'جدول قبض پیدا نشد.'
+            );
         }
 
         const sourceTbody =
@@ -3007,22 +3027,26 @@ async function generateImage() {
                 : 45;
 
         const renderedWidth = 794;
+
         const pageWidthMm = 210;
         const pageHeightMm = 297;
+
         const marginMm = 10;
 
         const contentWidthMm =
-            pageWidthMm - (marginMm * 2);
+            pageWidthMm -
+            (marginMm * 2);
 
         const contentHeightMm =
-            pageHeightMm - (marginMm * 2);
+            pageHeightMm -
+            (marginMm * 2);
 
         const printableHeightPx =
             renderedWidth *
             (contentHeightMm / contentWidthMm);
 
         const safePageHeightPx =
-            printableHeightPx - 70;
+            printableHeightPx - 66;
 
         const rowHeights =
             sourceRows.map(row =>
@@ -3035,26 +3059,33 @@ async function generateImage() {
                 : 0;
 
         const chunks = [];
+
         let currentChunk = [];
         let currentHeight = headerHeight;
 
-        sourceRows.forEach((row, index) => {
-            const rowHeight =
-                rowHeights[index] || 40;
+        sourceRows.forEach(
+            (row, index) => {
+                const rowHeight =
+                    rowHeights[index] || 40;
 
-            if (
-                currentChunk.length > 0 &&
-                currentHeight + rowHeight >
-                safePageHeightPx
-            ) {
-                chunks.push(currentChunk);
-                currentChunk = [];
-                currentHeight = headerHeight;
+                if (
+                    currentChunk.length > 0 &&
+                    currentHeight + rowHeight >
+                    safePageHeightPx
+                ) {
+                    chunks.push(currentChunk);
+
+                    currentChunk = [];
+
+                    currentHeight =
+                        headerHeight;
+                }
+
+                currentChunk.push(index);
+
+                currentHeight += rowHeight;
             }
-
-            currentChunk.push(index);
-            currentHeight += rowHeight;
-        });
+        );
 
         if (currentChunk.length > 0) {
             chunks.push(currentChunk);
@@ -3065,11 +3096,15 @@ async function generateImage() {
         }
 
         if (sourceSummary) {
-            let lastChunkHeight =
+            const lastChunk =
+                chunks[chunks.length - 1];
+
+            const lastChunkHeight =
                 headerHeight +
-                chunks[chunks.length - 1].reduce(
+                lastChunk.reduce(
                     (total, index) =>
-                        total + (rowHeights[index] || 40),
+                        total +
+                        (rowHeights[index] || 40),
                     0
                 );
 
@@ -3077,7 +3112,7 @@ async function generateImage() {
                 lastChunkHeight +
                 summaryHeight >
                 safePageHeightPx &&
-                chunks[chunks.length - 1].length > 0
+                lastChunk.length > 0
             ) {
                 chunks.push([]);
             }
@@ -3093,12 +3128,32 @@ async function generateImage() {
                 today.getDate()
             ).padStart(2, '0')}`;
 
-        for (let pageIndex = 0; pageIndex < chunks.length; pageIndex++) {
+        const fixedCanvasWidth = 1588;
+        const fixedCanvasHeight = 2246;
+
+        const marginPx =
+            fixedCanvasWidth *
+            (marginMm / pageWidthMm);
+
+        const contentWidthPx =
+            fixedCanvasWidth -
+            (marginPx * 2);
+
+        const contentHeightPx =
+            fixedCanvasHeight -
+            (marginPx * 2);
+
+        for (
+            let pageIndex = 0;
+            pageIndex < chunks.length;
+            pageIndex++
+        ) {
             const pageRows =
                 chunks[pageIndex];
 
             const isLastPage =
-                pageIndex === chunks.length - 1;
+                pageIndex ===
+                chunks.length - 1;
 
             const imageClone =
                 report.cloneNode(true);
@@ -3112,15 +3167,26 @@ async function generateImage() {
             imageClone.style.position = 'absolute';
             imageClone.style.left = '-100000px';
             imageClone.style.top = '0';
-            imageClone.style.width = `${renderedWidth}px`;
+
+            imageClone.style.width =
+                `${renderedWidth}px`;
+
             imageClone.style.minHeight = 'auto';
             imageClone.style.height = 'auto';
-            imageClone.style.background = '#ffffff';
-            imageClone.style.padding = '30px';
-            imageClone.style.boxSizing = 'border-box';
+
+            imageClone.style.background =
+                '#ffffff';
+
+            imageClone.style.padding =
+                '30px';
+
+            imageClone.style.boxSizing =
+                'border-box';
+
             imageClone.style.border = 'none';
             imageClone.style.boxShadow = 'none';
             imageClone.style.borderRadius = '0';
+
             imageClone.style.direction = 'rtl';
             imageClone.style.overflow = 'visible';
 
@@ -3128,7 +3194,9 @@ async function generateImage() {
                 imageClone.querySelector('table');
 
             if (!cloneTable) {
-                throw new Error('جدول قبض در صفحه تصویر پیدا نشد.');
+                throw new Error(
+                    'جدول قبض در صفحه تصویر پیدا نشد.'
+                );
             }
 
             const cloneTbody =
@@ -3139,27 +3207,40 @@ async function generateImage() {
                     cloneTable.remove();
                 } else {
                     const cloneRows =
-                        Array.from(cloneTbody.children);
+                        Array.from(
+                            cloneTbody.children
+                        );
 
-                    cloneRows.forEach((row, index) => {
-                        if (!pageRows.includes(index)) {
-                            row.remove();
+                    cloneRows.forEach(
+                        (row, index) => {
+                            if (
+                                !pageRows.includes(index)
+                            ) {
+                                row.remove();
+                            }
                         }
-                    });
+                    );
                 }
             }
 
             if (!isLastPage) {
                 const cloneSummary =
-                    imageClone.querySelector('.result-summary');
+                    imageClone.querySelector(
+                        '.result-summary'
+                    );
 
                 if (cloneSummary) {
                     cloneSummary.remove();
                 }
             }
 
-            document.body.appendChild(imageClone);
-            imageClones.push(imageClone);
+            document.body.appendChild(
+                imageClone
+            );
+
+            imageClones.push(
+                imageClone
+            );
 
             await new Promise(resolve =>
                 setTimeout(resolve, 30)
@@ -3181,13 +3262,15 @@ async function generateImage() {
                 );
 
             const fixedCanvas =
-                document.createElement('canvas');
+                document.createElement(
+                    'canvas'
+                );
 
             fixedCanvas.width =
-                1588;
+                fixedCanvasWidth;
 
             fixedCanvas.height =
-                2246;
+                fixedCanvasHeight;
 
             const fixedContext =
                 fixedCanvas.getContext('2d');
@@ -3204,21 +3287,29 @@ async function generateImage() {
 
             const scale =
                 Math.min(
-                    fixedCanvas.width / canvas.width,
-                    fixedCanvas.height / canvas.height
+                    contentWidthPx /
+                    canvas.width,
+                    contentHeightPx /
+                    canvas.height
                 );
 
             const drawWidth =
-                canvas.width * scale;
+                canvas.width *
+                scale;
 
             const drawHeight =
-                canvas.height * scale;
+                canvas.height *
+                scale;
 
             const offsetX =
-                (fixedCanvas.width - drawWidth) / 2;
+                marginPx +
+                (
+                    contentWidthPx -
+                    drawWidth
+                ) / 2;
 
             const offsetY =
-                0;
+                marginPx;
 
             fixedContext.drawImage(
                 canvas,
@@ -3229,7 +3320,9 @@ async function generateImage() {
             );
 
             const imageData =
-                fixedCanvas.toDataURL('image/png');
+                fixedCanvas.toDataURL(
+                    'image/png'
+                );
 
             const link =
                 document.createElement('a');
@@ -3240,17 +3333,26 @@ async function generateImage() {
             const fileName =
                 `قبض-آب-${datePart}-صفحه-${pageNumber}.png`;
 
-            link.download = fileName;
-            link.href = imageData;
+            link.download =
+                fileName;
+
+            link.href =
+                imageData;
+
             link.click();
 
             imageClone.remove();
+
             imageClones =
                 imageClones.filter(
-                    element => element !== imageClone
+                    element =>
+                        element !== imageClone
                 );
 
-            if (pageIndex < chunks.length - 1) {
+            if (
+                pageIndex <
+                chunks.length - 1
+            ) {
                 await new Promise(resolve =>
                     setTimeout(resolve, 150)
                 );
@@ -3258,7 +3360,6 @@ async function generateImage() {
         }
 
     } catch (error) {
-
         console.error(
             'Image generation error:',
             error
@@ -3269,10 +3370,11 @@ async function generateImage() {
         );
 
     } finally {
-
-        imageClones.forEach(clone => {
-            clone.remove();
-        });
+        imageClones.forEach(
+            clone => {
+                clone.remove();
+            }
+        );
 
         if (imageButton) {
             imageButton.disabled = false;
@@ -3383,5 +3485,10 @@ $('calculateBtn').addEventListener('click', calculate);
 ['periodStart', 'periodEnd', 'paymentDeadline'].forEach(setupJalaliDate);
 
 disableScrollOnNumberInputs();
+
+document.querySelectorAll('input[name="method"]').forEach(input => {
+    input.checked = false;
+});
+
 showMode();
 setDeadlineState();
