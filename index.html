@@ -20,30 +20,30 @@
                 </div>
                 <div class="brand-text">
                     <h1>آب‌بها</h1>
-                    <p class="subtitle">سامانه محاسبه قبض آب ساختمان</p>
+                    <p class="subtitle">محاسبه و تقسیم هزینه آب ساختمان</p>
                 </div>
             </div>
         </header>
 
         <hr>
 
-        <!-- بخش روش محاسبه (همیشه قابل مشاهده) -->
+        <!-- بخش روش تقسیم هزینه (همیشه قابل مشاهده) -->
         <section>
-            <h2>روش محاسبه</h2>
+            <h2>روش تقسیم هزینه</h2>
             <div class="method-box">
                 <label>
                     <input type="radio" name="method" value="sub-meter">
-                    تقسیم قبض بر اساس مصرف کنتورهای فرعی
+                    بر اساس مصرف کنتورهای فرعی
                     <p class="method-description" id="desc-sub-meter" hidden></p>
                 </label>
                 <label>
                     <input type="radio" name="method" value="main-meter">
-                    تقسیم با کنتور اصلی و تقسیم اختلاف
+                    بر اساس کنتور اصلی و کنتورهای فرعی
                     <p class="method-description" id="desc-main-meter" hidden></p>
                 </label>
                 <label>
                     <input type="radio" name="method" value="people">
-                    تقسیم قبض بر اساس تعداد نفرات
+                    بر اساس تعداد ساکنان
                     <p class="method-description" id="desc-people" hidden></p>
                 </label>
             </div>
@@ -81,7 +81,7 @@
             <input type="text" id="billAmount" inputmode="numeric">
 
             <label for="unitCount">تعداد واحدها</label>
-            <input type="number" id="unitCount" min="1" inputmode="numeric" pattern="[0-9]*">
+            <input type="number" id="unitCount" min="1" max="250" inputmode="numeric" pattern="[0-9]*">
 
             <div id="meterOptions">
                 <div id="mainMeterGroup" hidden>
@@ -148,7 +148,7 @@
             <label class="round-toggle">
                 <input type="checkbox" id="roundUpAmounts" checked>
                 <span class="toggle-slider"></span>
-                <span class="toggle-label">رند کردن سهم هر واحد به بالا (۱۰۰ تومان)</span>
+                <span class="toggle-label">گرد کردن سهم هر واحد به بالا (۱۰۰ تومان)</span>
             </label>
             <button id="calculateBtn">محاسبه</button>
         </section>
