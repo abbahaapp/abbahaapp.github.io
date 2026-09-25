@@ -2800,6 +2800,7 @@ async function generatePDF() {
 
             pageClone.style.background = '#ffffff';
             pageClone.style.padding = '30px';
+            pageClone.style.paddingBottom = '50px';
             pageClone.style.boxSizing = 'border-box';
 
             pageClone.style.border = 'none';
@@ -3179,6 +3180,9 @@ async function generateImage() {
 
             imageClone.style.padding =
                 '30px';
+
+            imageClone.style.paddingBottom =
+                '50px';
 
             imageClone.style.boxSizing =
                 'border-box';
