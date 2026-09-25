@@ -3350,16 +3350,24 @@ async function generateImage() {
                 fixedCanvas.height
             );
 
+            const imageHeightAtContentWidth =
+                canvas.height *
+                (contentWidthPx / canvas.width);
+
             const scale =
-                contentWidthPx /
-                canvas.width;
+                Math.min(
+                    1,
+                    contentHeightPx /
+                    imageHeightAtContentWidth
+                );
 
             const drawWidth =
                 canvas.width *
+                (contentWidthPx / canvas.width) *
                 scale;
 
             const drawHeight =
-                canvas.height *
+                imageHeightAtContentWidth *
                 scale;
 
             const offsetX =
