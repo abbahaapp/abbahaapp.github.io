@@ -2634,6 +2634,7 @@ async function generatePDF() {
 
         baseClone.style.background = '#ffffff';
         baseClone.style.padding = '30px';
+        baseClone.style.paddingBottom = '50px';
         baseClone.style.boxSizing = 'border-box';
 
         baseClone.style.border = 'none';
@@ -3015,11 +3016,6 @@ async function generateImage() {
         const reportHeader =
             sourceTable.querySelector('thead');
 
-        const headerHeight =
-            reportHeader
-                ? reportHeader.getBoundingClientRect().height
-                : 45;
-
         const renderedWidth = 794;
 
         const maxRowsPerPage = 25;
@@ -3044,10 +3040,95 @@ async function generateImage() {
         const safePageHeightPx =
             printableHeightPx - 66;
 
-        const rowHeights =
-            sourceRows.map(() => 40);
+        const measureClone =
+            report.cloneNode(true);
 
-        const summaryHeight = 0;
+        measureClone.querySelectorAll(
+            '.no-print'
+        ).forEach(element => {
+            element.remove();
+        });
+
+        measureClone.style.position = 'absolute';
+        measureClone.style.left = '-100000px';
+        measureClone.style.top = '0';
+
+        measureClone.style.width =
+            `${renderedWidth}px`;
+
+        measureClone.style.minHeight = 'auto';
+        measureClone.style.height = 'auto';
+
+        measureClone.style.background =
+            '#ffffff';
+
+        measureClone.style.padding =
+            '30px';
+
+        measureClone.style.paddingBottom =
+            '50px';
+
+        measureClone.style.boxSizing =
+            'border-box';
+
+        measureClone.style.border = 'none';
+        measureClone.style.boxShadow = 'none';
+        measureClone.style.borderRadius = '0';
+
+        measureClone.style.direction = 'rtl';
+        measureClone.style.overflow = 'visible';
+
+        document.body.appendChild(
+            measureClone
+        );
+
+        await new Promise(resolve =>
+            setTimeout(resolve, 30)
+        );
+
+        const measureTable =
+            measureClone.querySelector('table');
+
+        const measureTbody =
+            measureTable
+                ? measureTable.querySelector('tbody')
+                : null;
+
+        const measureRows =
+            measureTbody
+                ? Array.from(
+                    measureTbody.querySelectorAll('tr')
+                )
+                : [];
+
+        const measureThead =
+            measureTable
+                ? measureTable.querySelector('thead')
+                : null;
+
+        const headerHeight =
+            measureThead
+                ? measureThead.getBoundingClientRect().height
+                : 0;
+
+        const rowHeights =
+            measureRows.map(row =>
+                row.getBoundingClientRect().height
+            );
+
+        const measureSummary =
+            measureClone.querySelector(
+                '.result-summary'
+            );
+
+        const summaryHeight =
+            measureSummary
+                ? measureSummary.getBoundingClientRect().height
+                : 0;
+
+        const summaryGap = 20;
+
+        measureClone.remove();
 
         const chunks = [];
 
@@ -3074,7 +3155,7 @@ async function generateImage() {
             chunks.push([]);
         }
 
-        if (sourceSummary) {
+        if (summaryHeight > 0) {
             const lastChunk =
                 chunks[chunks.length - 1];
 
@@ -3083,9 +3164,10 @@ async function generateImage() {
                 lastChunk.reduce(
                     (total, index) =>
                         total +
-                        (rowHeights[index] || 40),
+                        (rowHeights[index] || 0),
                     0
                 ) +
+                summaryGap +
                 summaryHeight;
 
             if (
@@ -3269,12 +3351,8 @@ async function generateImage() {
             );
 
             const scale =
-                Math.min(
-                    contentWidthPx /
-                    canvas.width,
-                    contentHeightPx /
-                    canvas.height
-                );
+                contentWidthPx /
+                canvas.width;
 
             const drawWidth =
                 canvas.width *
