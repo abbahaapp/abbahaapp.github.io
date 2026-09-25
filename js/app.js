@@ -3337,7 +3337,7 @@ async function generateImage() {
                 chunks.length - 1
             ) {
                 await new Promise(resolve =>
-                    setTimeout(resolve, 150)
+                    setTimeout(resolve, 1500)
                 );
             }
         }
