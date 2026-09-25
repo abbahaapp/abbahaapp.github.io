@@ -2666,8 +2666,9 @@ async function generatePDF() {
         const rowCount =
             sourceRows.length;
 
-        const renderedWidth =
-            baseClone.scrollWidth;
+        const renderedWidth = 794;
+
+        const maxRowsPerPage = 25;
 
         const printableHeightPx =
             renderedWidth *
@@ -2703,67 +2704,58 @@ async function generatePDF() {
 
         const pageChunks = [];
 
-        let currentChunk = [];
-        let currentHeight = headerHeight;
-
         for (
-            let i = 0;
-            i < rowCount;
-            i++
+            let start = 0;
+            start < rowCount;
+            start += maxRowsPerPage
         ) {
-            const rowHeight =
-                rowHeights[i];
+            const end =
+                Math.min(
+                    start + maxRowsPerPage,
+                    rowCount
+                );
 
-            if (
-                currentChunk.length > 0 &&
-                currentHeight + rowHeight >
-                safePageHeightPx
-            ) {
-                pageChunks.push({
-                    rows: currentChunk,
-                    isLast: false
-                });
-
-                currentChunk = [];
-                currentHeight = headerHeight;
-            }
-
-            currentChunk.push(i);
-            currentHeight += rowHeight;
+            pageChunks.push({
+                rows: Array.from(
+                    { length: end - start },
+                    (_, index) => start + index
+                ),
+                isLast: false
+            });
         }
 
-        if (currentChunk.length > 0) {
-            const lastChunkHeight =
-                currentHeight +
-                summaryGap +
-                summaryHeight;
-
-            if (
-                lastChunkHeight <=
-                safePageHeightPx
-            ) {
-                pageChunks.push({
-                    rows: currentChunk,
-                    isLast: true
-                });
-            } else {
-                pageChunks.push({
-                    rows: currentChunk,
-                    isLast: false
-                });
-
-                pageChunks.push({
-                    rows: [],
-                    isLast: true
-                });
-            }
-        } else {
+        if (pageChunks.length === 0) {
             pageChunks.push({
                 rows: [],
                 isLast: true
             });
         }
 
+        const lastChunk =
+            pageChunks[pageChunks.length - 1];
+
+        const lastChunkHeight =
+            headerHeight +
+            lastChunk.rows.reduce(
+                (total, index) =>
+                    total +
+                    (rowHeights[index] || 0),
+                0
+            ) +
+            summaryGap +
+            summaryHeight;
+
+        if (
+            lastChunkHeight <=
+            safePageHeightPx
+        ) {
+            lastChunk.isLast = true;
+        } else {
+            pageChunks.push({
+                rows: [],
+                isLast: true
+            });
+        }
         baseClone.remove();
 
         const pdf = new jsPDF({
@@ -3029,6 +3021,8 @@ async function generateImage() {
 
         const renderedWidth = 794;
 
+        const maxRowsPerPage = 25;
+
         const pageWidthMm = 210;
         const pageHeightMm = 297;
 
@@ -3061,35 +3055,23 @@ async function generateImage() {
 
         const chunks = [];
 
-        let currentChunk = [];
-        let currentHeight = headerHeight;
+        for (
+            let start = 0;
+            start < sourceRows.length;
+            start += maxRowsPerPage
+        ) {
+            const end =
+                Math.min(
+                    start + maxRowsPerPage,
+                    sourceRows.length
+                );
 
-        sourceRows.forEach(
-            (row, index) => {
-                const rowHeight =
-                    rowHeights[index] || 40;
-
-                if (
-                    currentChunk.length > 0 &&
-                    currentHeight + rowHeight >
-                    safePageHeightPx
-                ) {
-                    chunks.push(currentChunk);
-
-                    currentChunk = [];
-
-                    currentHeight =
-                        headerHeight;
-                }
-
-                currentChunk.push(index);
-
-                currentHeight += rowHeight;
-            }
-        );
-
-        if (currentChunk.length > 0) {
-            chunks.push(currentChunk);
+            chunks.push(
+                Array.from(
+                    { length: end - start },
+                    (_, index) => start + index
+                )
+            );
         }
 
         if (chunks.length === 0) {
@@ -3107,11 +3089,11 @@ async function generateImage() {
                         total +
                         (rowHeights[index] || 40),
                     0
-                );
+                ) +
+                summaryHeight;
 
             if (
-                lastChunkHeight +
-                summaryHeight >
+                lastChunkHeight >
                 safePageHeightPx &&
                 lastChunk.length > 0
             ) {
