@@ -3229,10 +3229,9 @@ async function generateImage() {
                 'image-export-clone'
             );
 
-            imageClone.style.position = 'fixed';
-            imageClone.style.left = '0';
+            imageClone.style.position = 'absolute';
+            imageClone.style.left = '-100000px';
             imageClone.style.top = '0';
-            imageClone.style.visibility = 'hidden';
 
             imageClone.style.width =
                 `${renderedWidth}px`;
