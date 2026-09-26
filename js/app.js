@@ -3408,9 +3408,14 @@ async function generateImage() {
             link.href =
                 imageData;
 
+            link.style.display =
+                'none';
+
+            document.body.appendChild(link);
+
             link.click();
 
-            imageClone.remove();
+            link.remove();
 
             imageClones =
                 imageClones.filter(
