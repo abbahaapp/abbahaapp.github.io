@@ -1351,7 +1351,11 @@ input[type="number"] {
     .app-footer {
         display: none !important;
     }
-
+    
+    .image-export-clone {
+        display: none !important;
+    }
+    
     body>.container>* {
         display: none !important;
     }
