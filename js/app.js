@@ -3422,15 +3422,6 @@ async function generateImage() {
                     element =>
                         element !== imageClone
                 );
-
-            if (
-                pageIndex <
-                chunks.length - 1
-            ) {
-                await new Promise(resolve =>
-                    setTimeout(resolve, 1500)
-                );
-            }
         }
 
     } catch (error) {
