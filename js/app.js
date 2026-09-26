@@ -3225,6 +3225,10 @@ async function generateImage() {
                 element.remove();
             });
 
+            imageClone.classList.add(
+                'image-export-clone'
+            );
+
             imageClone.style.position = 'absolute';
             imageClone.style.left = '-100000px';
             imageClone.style.top = '0';
