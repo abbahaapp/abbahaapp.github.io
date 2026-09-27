@@ -2981,6 +2981,7 @@ async function generateImage() {
         document.getElementById('imageBtnInside');
 
     let imageClones = [];
+    const imagePages = [];
 
     try {
         if (imageButton) {
@@ -3397,29 +3398,16 @@ async function generateImage() {
                     'image/png'
                 );
 
-            const link =
-                document.createElement('a');
-
             const pageNumber =
                 pageIndex + 1;
 
             const fileName =
                 `قبض-آب-${datePart}-صفحه-${pageNumber}.png`;
 
-            link.download =
-                fileName;
-
-            link.href =
-                imageData;
-
-            link.style.display =
-                'none';
-
-            document.body.appendChild(link);
-
-            link.click();
-
-            link.remove();
+            imagePages.push({
+                fileName,
+                imageData
+            });
 
             imageClone.remove();
             imageClones =
@@ -3428,7 +3416,49 @@ async function generateImage() {
                         element !== imageClone
                 );
         }
+        if (imagePages.length === 1) {
+            const link = document.createElement('a');
+            const imagePage = imagePages[0];
 
+            link.download = imagePage.fileName;
+            link.href = imagePage.imageData;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } else if (imagePages.length > 1) {
+            if (typeof JSZip === 'undefined') {
+                throw new Error('کتابخانه ZIP بارگذاری نشده است.');
+            }
+
+            const zip = new JSZip();
+
+            imagePages.forEach(imagePage => {
+                zip.file(
+                    imagePage.fileName,
+                    imagePage.imageData.split(',')[1],
+                    { base64: true }
+                );
+            });
+
+            const zipBlob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'STORE'
+            });
+            const zipUrl = URL.createObjectURL(zipBlob);
+            const link = document.createElement('a');
+
+            link.download = `قبض-آب-${datePart}.zip`;
+            link.href = zipUrl;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 1000);
+        }
     } catch (error) {
         console.error(
             'Image generation error:',
