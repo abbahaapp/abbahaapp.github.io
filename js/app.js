@@ -3421,6 +3421,7 @@ async function generateImage() {
 
             link.remove();
 
+            imageClone.remove();
             imageClones =
                 imageClones.filter(
                     element =>
